@@ -1,0 +1,97 @@
+<head>
+    <title>Gurted Teams Chat</title>
+    <icon src="gurt://example.real/chat-icon.png">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <h1>Gurted Teams Chat</h1>
+
+    <div id="app">
+        <div id="sidebar">
+            <h2>Channels</h2>
+        </div>
+
+        <div id="chat-area">
+            <div id="messages"></div>
+            <div style="display:flex; gap:0.5rem;">
+                <input id="chat-input" placeholder="Type a message..." />
+                <button id="send-btn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    --========================
+    -- Initialization
+    --========================
+    local channels = { "General", "Random", "Dev" }
+    local messages = { General = {}, Random = {}, Dev = {} }
+    local current_channel = "General"
+    local username = "You"
+
+    local sidebar = gurt.select('#sidebar')
+    local messages_div = gurt.select('#messages')
+    local chat_input = gurt.select('#chat-input')
+    local send_btn = gurt.select('#send-btn')
+
+    --========================
+    -- Helper Functions
+    --========================
+    local function timestamp()
+        local t = os.date("*t")
+        return string.format("%02d:%02d", t.hour, t.min)
+    end
+
+    local function render_channels()
+        sidebar:clear()
+        for _, ch in ipairs(channels) do
+            local btn = gurt.create('button', { text = ch })
+            if ch == current_channel then
+                btn:addClass('active')
+            end
+            btn:on('click', function()
+                current_channel = ch
+                render_channels()
+                render_messages()
+            end)
+            sidebar:append(btn)
+        end
+    end
+
+    local function render_messages()
+        messages_div:clear()
+        for _, msg in ipairs(messages[current_channel]) do
+            local bubble = gurt.create('div', { text = msg.user.." ["..msg.time.."]: "..msg.text })
+            bubble:addClass('msg-bubble')
+            if msg.user == username then
+                bubble:addClass('msg-user')
+            else
+                bubble:addClass('msg-other')
+            end
+            messages_div:append(bubble)
+        end
+        messages_div:scrollTop(messages_div:scrollHeight())
+    end
+
+    local function send_message()
+        local text = chat_input:value() or ""
+        if text ~= "" then
+            table.insert(messages[current_channel], { user = username, text = text, time = timestamp() })
+            chat_input:value("") -- clear input
+            render_messages()
+        end
+    end
+
+    send_btn:on('click', send_message)
+    chat_input:on('keydown', function(event)
+        if event.key == "Enter" then send_message() end
+    end)
+
+    --========================
+    -- Initial Render
+    --========================
+    render_channels()
+    render_messages()
+    </script>
+</body>
