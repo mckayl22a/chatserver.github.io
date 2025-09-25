@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Teams-Style Chat</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Teams-Style Chat</h1>
+
+    <div id="app">
+        <div id="sidebar">
+            <h2>Channels</h2>
+        </div>
+
+        <div id="chat-area">
+            <div id="messages"></div>
+            <div style="display:flex; gap:0.5rem;">
+                <input id="chat-input" placeholder="Type a message..." />
+                <button id="send-btn">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    //========================
+    // Initialization
+    //========================
+    const channels = ["General", "Random", "Dev"];
+    const messages = { General: [], Random: [], Dev: [] };
+    let currentChannel = "General";
+    const username = "You";
+
+    const sidebar = document.getElementById('sidebar');
+    const messagesDiv = document.getElementById('messages');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    //========================
+    // Helper Functions
+    //========================
+    function timestamp() {
+        const t = new Date();
+        return t.getHours().toString().padStart(2, '0') + ":" +
+               t.getMinutes().toString().padStart(2, '0');
+    }
+
+    function renderChannels() {
+        sidebar.innerHTML = "<h2>Channels</h2>";
+        channels.forEach(ch => {
+            const btn = document.createElement("button");
+            btn.textContent = ch;
+            btn.className = (ch === currentChannel) ? "active" : "";
+            btn.addEventListener("click", () => {
+                currentChannel = ch;
+                renderChannels();
+                renderMessages();
+            });
+            sidebar.appendChild(btn);
+        });
+    }
+
+    function renderMessages() {
+        messagesDiv.innerHTML = "";
+        messages[currentChannel].forEach(msg => {
+            const bubble = document.createElement("div");
+            bubble.textContent = `${msg.user} [${msg.time}]: ${msg.text}`;
+            bubble.className = "msg-bubble " + (msg.user === username ? "msg-user" : "msg-other");
+            messagesDiv.appendChild(bubble);
+        });
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function sendMessage() {
+        const text = chatInput.value.trim();
+        if(text !== "") {
+            messages[currentChannel].push({ user: username, text, time: timestamp() });
+            chatInput.value = "";
+            renderMessages();
+        }
+    }
+
+    sendBtn.addEventListener("click", sendMessage);
+    chatInput.addEventListener("keydown", (event) => {
+        if(event.key === "Enter") sendMessage();
+    });
+
+    //========================
+    // Initial Render
+    //========================
+    renderChannels();
+    renderMessages();
+    </script>
+</body>
+</html>
