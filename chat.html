@@ -8,6 +8,7 @@
 <body>
 
 <h1>GurtChat</h1>
+<button id="logout-btn" style="position:absolute; top:10px; right:10px;">Logout</button>
 
 <div id="app">
     <div id="sidebar">
@@ -24,102 +25,101 @@
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-  import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
 
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyAAOy6HTJ7DCg3jGqCzrvQPWVhtU9umJ0E",
-    authDomain: "gurtchat-237b3.firebaseapp.com",
-    databaseURL: "https://gurtchat-237b3-default-rtdb.firebaseio.com",
-    projectId: "gurtchat-237b3",
-    storageBucket: "gurtchat-237b3.firebasestorage.app",
-    messagingSenderId: "762205720734",
-    appId: "1:762205720734:web:e96c0888b31155380aeb8f"
-  };
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyAAOy6HTJ7DCg3jGqCzrvQPWVhtU9umJ0E",
+  authDomain: "gurtchat-237b3.firebaseapp.com",
+  databaseURL: "https://gurtchat-237b3-default-rtdb.firebaseio.com",
+  projectId: "gurtchat-237b3",
+  storageBucket: "gurtchat-237b3.firebasestorage.app",
+  messagingSenderId: "762205720734",
+  appId: "1:762205720734:web:e96c0888b31155380aeb8f"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
 
-  //========================
-  // Username check
-  //========================
-  const username = localStorage.getItem("gurtchat_username");
-  if(!username) {
-    // Not logged in, redirect to login page
-    window.location.href = "index.html";
-  }
+//========================
+// Username check
+//========================
+const username = localStorage.getItem("gurtchat_username");
+if(!username) window.location.href = "index.html";
 
-  //========================
-  // Chat Initialization
-  //========================
-  const channels = ["General", "Random", "Dev"];
-  let currentChannel = "General";
+//========================
+// Chat Initialization
+//========================
+const channels = ["General", "Random", "Dev"];
+let currentChannel = "General";
 
-  const sidebar = document.getElementById('sidebar');
-  const messagesDiv = document.getElementById('messages');
-  const chatInput = document.getElementById('chat-input');
-  const sendBtn = document.getElementById('send-btn');
+const sidebar = document.getElementById('sidebar');
+const messagesDiv = document.getElementById('messages');
+const chatInput = document.getElementById('chat-input');
+const sendBtn = document.getElementById('send-btn');
+const logoutBtn = document.getElementById('logout-btn');
 
-  //========================
-  // Functions
-  //========================
-  function renderChannels() {
-    sidebar.innerHTML = "<h2>Channels</h2>";
-    channels.forEach(ch => {
-      const btn = document.createElement("button");
-      btn.textContent = ch;
-      btn.className = (ch === currentChannel) ? "active" : "";
-      btn.addEventListener("click", () => {
-        currentChannel = ch;
-        renderChannels();
-        listenMessages();
-      });
-      sidebar.appendChild(btn);
+//========================
+// Logout
+//========================
+logoutBtn.addEventListener("click", () => {
+  localStorage.removeItem("gurtchat_username");
+  window.location.href = "index.html";
+});
+
+//========================
+// Functions
+//========================
+function renderChannels() {
+  sidebar.innerHTML = "<h2>Channels</h2>";
+  channels.forEach(ch => {
+    const btn = document.createElement("button");
+    btn.textContent = ch;
+    btn.className = (ch === currentChannel) ? "active" : "";
+    btn.addEventListener("click", () => {
+      currentChannel = ch;
+      renderChannels();
+      listenMessages();
     });
+    sidebar.appendChild(btn);
+  });
+}
+
+function renderMessageBubble(msg) {
+  const bubble = document.createElement("div");
+  bubble.textContent = `${msg.user} [${msg.time}]: ${msg.text}`;
+  bubble.className = "msg-bubble " + (msg.user === username ? "msg-user" : "msg-other");
+  messagesDiv.appendChild(bubble);
+  messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function sendMessage() {
+  const text = chatInput.value.trim();
+  if(text !== "") {
+    const msg = { user: username, text, time: new Date().toLocaleTimeString() };
+    push(ref(db, `messages/${currentChannel}`), msg);
+    chatInput.value = "";
   }
+}
 
-  function renderMessageBubble(msg) {
-    const bubble = document.createElement("div");
-    bubble.textContent = `${msg.user} [${msg.time}]: ${msg.text}`;
-    bubble.className = "msg-bubble " + (msg.user === username ? "msg-user" : "msg-other");
-    messagesDiv.appendChild(bubble);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
+function listenMessages() {
+  messagesDiv.innerHTML = "";
+  const messagesRef = ref(db, `messages/${currentChannel}`);
+  onChildAdded(messagesRef, snapshot => renderMessageBubble(snapshot.val()));
+}
 
-  function sendMessage() {
-    const text = chatInput.value.trim();
-    if(text !== "") {
-      const msg = { 
-        user: username, 
-        text: text, 
-        time: new Date().toLocaleTimeString() 
-      };
-      push(ref(db, `messages/${currentChannel}`), msg);
-      chatInput.value = "";
-    }
-  }
+//========================
+// Event Listeners
+//========================
+sendBtn.addEventListener("click", sendMessage);
+chatInput.addEventListener("keydown", (e) => { if(e.key==="Enter") sendMessage(); });
 
-  function listenMessages() {
-    messagesDiv.innerHTML = "";
-    const messagesRef = ref(db, `messages/${currentChannel}`);
-    onChildAdded(messagesRef, snapshot => {
-      renderMessageBubble(snapshot.val());
-    });
-  }
-
-  //========================
-  // Event Listeners
-  //========================
-  sendBtn.addEventListener("click", sendMessage);
-  chatInput.addEventListener("keydown", (e) => { if(e.key==="Enter") sendMessage(); });
-
-  //========================
-  // Initial Render
-  //========================
-  renderChannels();
-  listenMessages();
-
+//========================
+// Initial Render
+//========================
+renderChannels();
+listenMessages();
 </script>
 </body>
 </html>
