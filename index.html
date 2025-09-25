@@ -1,32 +1,154 @@
 <head>
     <title>Gurted Teams Chat</title>
     <icon src="gurt://example.real/chat-icon.png">
+
+    <style>
+        /* General page styling */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            margin-bottom: 1rem;
+        }
+
+        /* Main container */
+        #app {
+            display: flex;
+            flex-direction: row;
+            gap: 1rem;
+            padding: 1rem;
+            height: 80vh;
+        }
+
+        /* Sidebar styling */
+        #sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            width: 220px;
+            background-color: #e5e7eb;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        #sidebar button {
+            padding: 0.5rem;
+            border: none;
+            border-radius: 0.25rem;
+            background-color: transparent;
+            cursor: pointer;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        #sidebar button:hover {
+            background-color: #d1d5db;
+        }
+
+        #sidebar button.active {
+            background-color: #60a5fa;
+            color: white;
+        }
+
+        /* Chat area */
+        #chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            background-color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        /* Messages window */
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.5rem;
+        }
+
+        /* Chat bubbles */
+        .msg-bubble {
+            margin-bottom: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .msg-user {
+            background-color: #60a5fa;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .msg-other {
+            background-color: #e5e7eb;
+            color: #111827;
+            align-self: flex-start;
+        }
+
+        /* Input area */
+        #chat-area div input {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+        }
+
+        #chat-area div button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.25rem;
+            background-color: #3b82f6;
+            color: white;
+            cursor: pointer;
+        }
+
+        #chat-area div button:hover {
+            background-color: #2563eb;
+        }
+
+        /* Scrollbar styling */
+        #messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        #messages::-webkit-scrollbar-thumb {
+            background-color: #9ca3af;
+            border-radius: 3px;
+        }
+        #messages::-webkit-scrollbar-track {
+            background-color: #f3f4f6;
+        }
+    </style>
 </head>
 
 <body>
     <h1 style="text-3xl font-bold text-center mb-4">Gurted Teams Chat</h1>
 
-    <!-- Main container -->
-    <div id="app" style="flex flex-row gap-4 p-4 h-[80vh]">
-        <!-- Channels sidebar -->
-        <div id="sidebar" style="flex flex-col gap-2 w-[220px] bg-[#f1f5f9] p-2 rounded shadow">
+    <div id="app">
+        <div id="sidebar">
             <h2 style="text-xl font-bold mb-2">Channels</h2>
         </div>
 
-        <!-- Chat area -->
-        <div id="chat-area" style="flex flex-col flex-1 gap-2 bg-white p-4 rounded shadow">
-            <div id="messages" style="flex-1 overflow-y-scroll border-b pb-2"></div>
-            <div style="flex flex-row gap-2 mt-2">
-                <input id="chat-input" style="flex-1 p-2 border rounded" placeholder="Type a message..." />
-                <button id="send-btn" style="bg-blue-500 text-white p-2 rounded">Send</button>
+        <div id="chat-area">
+            <div id="messages"></div>
+            <div style="display:flex; gap:0.5rem;">
+                <input id="chat-input" placeholder="Type a message..." />
+                <button id="send-btn">Send</button>
             </div>
         </div>
     </div>
 
     <script>
-    --========================
-    -- Initialization
-    --========================
     local channels = { "General", "Random", "Dev" }
     local messages = { General = {}, Random = {}, Dev = {} }
     local current_channel = "General"
@@ -37,24 +159,18 @@
     local chat_input = gurt.select('#chat-input')
     local send_btn = gurt.select('#send-btn')
 
-    --========================
-    -- Helper Functions
-    --========================
-
-    -- Format timestamp
     local function timestamp()
         local t = os.date("*t")
         return string.format("%02d:%02d", t.hour, t.min)
     end
 
-    -- Render channel buttons
     local function render_channels()
         sidebar:clear()
         for _, ch in ipairs(channels) do
-            local btn = gurt.create('button', { 
-                style = (ch==current_channel and 'p-2 rounded bg-blue-200' or 'p-2 rounded hover:bg-gray-200'), 
-                text = ch 
-            })
+            local btn = gurt.create('button', { text = ch })
+            if ch == current_channel then
+                btn:addClass('active')
+            end
             btn:on('click', function()
                 current_channel = ch
                 render_channels()
@@ -64,24 +180,21 @@
         end
     end
 
-    -- Render messages
     function render_messages()
         messages_div:clear()
         for _, msg in ipairs(messages[current_channel]) do
-            local bubble_style = 'mb-2 p-2 rounded '
+            local bubble = gurt.create('div', { text = msg.user.." ["..msg.time.."]: "..msg.text, style="display:flex;" })
+            bubble:addClass('msg-bubble')
             if msg.user == username then
-                bubble_style = bubble_style .. 'bg-blue-500 text-white self-end'
+                bubble:addClass('msg-user')
             else
-                bubble_style = bubble_style .. 'bg-gray-200 self-start'
+                bubble:addClass('msg-other')
             end
-            local msg_div = gurt.create('div', { style = bubble_style })
-            msg_div:text(msg.user .. " [" .. msg.time .. "]: " .. msg.text)
-            messages_div:append(msg_div)
+            messages_div:append(bubble)
         end
         messages_div:scrollTop(messages_div:scrollHeight())
     end
 
-    -- Send message
     local function send_message()
         local text = chat_input:value()
         if text ~= '' then
@@ -96,9 +209,6 @@
         if event.key == "Enter" then send_message() end
     end)
 
-    --========================
-    -- Initial Render
-    --========================
     render_channels()
     render_messages()
     </script>
