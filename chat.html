@@ -8,6 +8,7 @@
 <body>
 
 <h1>GurtChat</h1>
+<button id="user-btn" style="position:absolute; top:10px; right:80px;">User</button>
 <button id="logout-btn" style="position:absolute; top:10px; right:10px;">Logout</button>
 
 <div id="app">
@@ -59,13 +60,31 @@ const messagesDiv = document.getElementById('messages');
 const chatInput = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
 const logoutBtn = document.getElementById('logout-btn');
+const userBtn = document.getElementById('user-btn');
 
 //========================
-// Logout
+// Bad words filtering
+//========================
+const bannedWords = ["badword1","badword2","badword3"];
+function filterMessage(text) {
+  let filtered = text;
+  bannedWords.forEach(word => {
+    const regex = new RegExp(`\\b${word}\\b`, "gi");
+    filtered = filtered.replace(regex, "****");
+  });
+  return filtered;
+}
+
+//========================
+// Logout / User buttons
 //========================
 logoutBtn.addEventListener("click", () => {
   localStorage.removeItem("gurtchat_username");
   window.location.href = "index.html";
+});
+
+userBtn.addEventListener("click", () => {
+  window.location.href = "user.html";
 });
 
 //========================
@@ -95,8 +114,9 @@ function renderMessageBubble(msg) {
 }
 
 function sendMessage() {
-  const text = chatInput.value.trim();
-  if(text !== "") {
+  const rawText = chatInput.value.trim();
+  if(rawText !== "") {
+    const text = filterMessage(rawText);
     const msg = { user: username, text, time: new Date().toLocaleTimeString() };
     push(ref(db, `messages/${currentChannel}`), msg);
     chatInput.value = "";
@@ -120,6 +140,7 @@ chatInput.addEventListener("keydown", (e) => { if(e.key==="Enter") sendMessage()
 //========================
 renderChannels();
 listenMessages();
+
 </script>
 </body>
 </html>
