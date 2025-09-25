@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GurtChat - User Page</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div style="max-width: 400px; margin: 100px auto; text-align: center;">
+  <h1>User Page</h1>
+  <p id="username-display" style="font-size: 1.2rem; margin-bottom: 1rem;"></p>
+  <button id="logout-btn" style="padding: 0.5rem 1rem;">Logout</button>
+</div>
+
+<script>
+  const username = localStorage.getItem("gurtchat_username");
+  if(!username) window.location.href = "index.html";
+
+  document.getElementById("username-display").textContent = "Logged in as: " + username;
+
+  document.getElementById("logout-btn").addEventListener("click", () => {
+    localStorage.removeItem("gurtchat_username");
+    window.location.href = "index.html";
+  });
+</script>
+
+</body>
+</html>
