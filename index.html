@@ -1,25 +1,21 @@
 <head>
-    <title>Gurted Chat</title>
+    <title>Gurted Teams Chat</title>
     <icon src="gurt://example.real/chat-icon.png">
-
-    <style>
-        /* Optional additional styling if needed */
-    </style>
 </head>
 
 <body>
-    <h1 style="text-3xl font-bold text-center">Gurted Chat</h1>
+    <h1 style="text-3xl font-bold text-center mb-4">Gurted Teams Chat</h1>
 
     <!-- Main container -->
     <div id="app" style="flex flex-row gap-4 p-4 h-[80vh]">
         <!-- Channels sidebar -->
-        <div id="sidebar" style="flex flex-col gap-2 w-[200px] bg-[#f1f5f9] p-2 rounded">
+        <div id="sidebar" style="flex flex-col gap-2 w-[220px] bg-[#f1f5f9] p-2 rounded shadow">
             <h2 style="text-xl font-bold mb-2">Channels</h2>
         </div>
 
         <!-- Chat area -->
         <div id="chat-area" style="flex flex-col flex-1 gap-2 bg-white p-4 rounded shadow">
-            <div id="messages" style="flex-1 overflow-y-scroll"></div>
+            <div id="messages" style="flex-1 overflow-y-scroll border-b pb-2"></div>
             <div style="flex flex-row gap-2 mt-2">
                 <input id="chat-input" style="flex-1 p-2 border rounded" placeholder="Type a message..." />
                 <button id="send-btn" style="bg-blue-500 text-white p-2 rounded">Send</button>
@@ -28,51 +24,81 @@
     </div>
 
     <script>
-    -- Initialize channels and messages
+    --========================
+    -- Initialization
+    --========================
     local channels = { "General", "Random", "Dev" }
     local messages = { General = {}, Random = {}, Dev = {} }
     local current_channel = "General"
+    local username = "You"
 
     local sidebar = gurt.select('#sidebar')
     local messages_div = gurt.select('#messages')
     local chat_input = gurt.select('#chat-input')
+    local send_btn = gurt.select('#send-btn')
 
-    -- Function to render channels
+    --========================
+    -- Helper Functions
+    --========================
+
+    -- Format timestamp
+    local function timestamp()
+        local t = os.date("*t")
+        return string.format("%02d:%02d", t.hour, t.min)
+    end
+
+    -- Render channel buttons
     local function render_channels()
         sidebar:clear()
         for _, ch in ipairs(channels) do
-            local btn = gurt.create('button', { style = 'p-2 rounded hover:bg-gray-200', text = ch })
+            local btn = gurt.create('button', { 
+                style = (ch==current_channel and 'p-2 rounded bg-blue-200' or 'p-2 rounded hover:bg-gray-200'), 
+                text = ch 
+            })
             btn:on('click', function()
                 current_channel = ch
+                render_channels()
                 render_messages()
             end)
             sidebar:append(btn)
         end
     end
 
-    -- Function to render messages
+    -- Render messages
     function render_messages()
         messages_div:clear()
         for _, msg in ipairs(messages[current_channel]) do
-            local msg_div = gurt.create('div', { style = 'mb-1' })
-            msg_div:text(msg.user .. ": " .. msg.text)
+            local bubble_style = 'mb-2 p-2 rounded '
+            if msg.user == username then
+                bubble_style = bubble_style .. 'bg-blue-500 text-white self-end'
+            else
+                bubble_style = bubble_style .. 'bg-gray-200 self-start'
+            end
+            local msg_div = gurt.create('div', { style = bubble_style })
+            msg_div:text(msg.user .. " [" .. msg.time .. "]: " .. msg.text)
             messages_div:append(msg_div)
         end
         messages_div:scrollTop(messages_div:scrollHeight())
     end
 
-    -- Function to send a message
-    local send_btn = gurt.select('#send-btn')
-    send_btn:on('click', function()
+    -- Send message
+    local function send_message()
         local text = chat_input:value()
         if text ~= '' then
-            table.insert(messages[current_channel], { user = 'You', text = text })
+            table.insert(messages[current_channel], { user = username, text = text, time = timestamp() })
             chat_input:text('')
             render_messages()
         end
+    end
+
+    send_btn:on('click', send_message)
+    chat_input:on('keypress', function(event)
+        if event.key == "Enter" then send_message() end
     end)
 
-    -- Initial render
+    --========================
+    -- Initial Render
+    --========================
     render_channels()
     render_messages()
     </script>
