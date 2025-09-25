@@ -9,31 +9,64 @@
 
 <div style="max-width: 400px; margin: 100px auto; text-align: center;">
   <h1>Welcome to GurtChat</h1>
-  <input type="text" id="username-input" placeholder="Enter your username" style="width: 100%; padding: 0.5rem; margin-bottom: 1rem;">
+  <input type="text" id="username-input" placeholder="Enter your username" style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem;">
+  
+  <div style="margin-bottom: 1rem;">
+    <label><input type="checkbox" id="remember-me"> Remember Me</label>
+  </div>
+  
   <button id="login-btn" style="padding: 0.5rem 1rem;">Login</button>
 </div>
 
-<script>
-  // Check if user is already logged in
-  const savedUsername = localStorage.getItem("gurtchat_username");
-  if(savedUsername) {
-    window.location.href = "chat.html";
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyAAOy6HTJ7DCg3jGqCzrvQPWVhtU9umJ0E",
+  authDomain: "gurtchat-237b3.firebaseapp.com",
+  databaseURL: "https://gurtchat-237b3-default-rtdb.firebaseio.com",
+  projectId: "gurtchat-237b3",
+  storageBucket: "gurtchat-237b3.firebasestorage.app",
+  messagingSenderId: "762205720734",
+  appId: "1:762205720734:web:e96c0888b31155380aeb8f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// Redirect if already logged in
+const savedUsername = localStorage.getItem("gurtchat_username");
+if(savedUsername) {
+  window.location.href = "chat.html";
+}
+
+// Login button click
+document.getElementById("login-btn").addEventListener("click", () => {
+  const username = document.getElementById("username-input").value.trim();
+  const remember = document.getElementById("remember-me").checked;
+
+  if(!username) {
+    alert("Please enter a username");
+    return;
   }
 
-  document.getElementById("login-btn").addEventListener("click", () => {
-    const username = document.getElementById("username-input").value.trim();
-    if(username) {
-      localStorage.setItem("gurtchat_username", username);
-      window.location.href = "chat.html";
-    } else {
-      alert("Please enter a username");
-    }
-  });
+  // Save user to Firebase
+  set(ref(db, `users/${username}`), { username, lastLogin: new Date().toISOString() });
 
-  // Optionally allow pressing Enter to login
-  document.getElementById("username-input").addEventListener("keydown", (e) => {
-    if(e.key === "Enter") document.getElementById("login-btn").click();
-  });
+  // Save to localStorage if remember me is checked
+  if(remember) localStorage.setItem("gurtchat_username", username);
+
+  // Redirect to chat
+  window.location.href = "chat.html";
+});
+
+// Enter key to login
+document.getElementById("username-input").addEventListener("keydown", (e) => {
+  if(e.key === "Enter") document.getElementById("login-btn").click();
+});
 </script>
 
 </body>
