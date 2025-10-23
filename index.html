@@ -2,27 +2,35 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>GurtChat Login</title>
+<title>GurtChat - Login</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<div class="login-container">
+  <h1>GurtChat Login</h1>
+  
+  <div id="auth-forms">
+    <div id="login-form">
+      <input type="email" id="login-email" placeholder="Email" required />
+      <input type="password" id="login-password" placeholder="Password" required />
+      <button id="login-btn">Login</button>
+      <p>Don’t have an account? <a href="#" id="show-register">Create one</a></p>
+    </div>
 
-<div style="max-width: 400px; margin: 100px auto; text-align: center;">
-  <h1>Welcome to GurtChat</h1>
-  <input type="text" id="username-input" placeholder="Enter your username" style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem;">
-  
-  <div style="margin-bottom: 1rem;">
-    <label><input type="checkbox" id="remember-me"> Remember Me</label>
+    <div id="register-form" style="display:none;">
+      <input type="email" id="register-email" placeholder="Email" required />
+      <input type="password" id="register-password" placeholder="Password" required />
+      <button id="register-btn">Create Account</button>
+      <p>Already have an account? <a href="#" id="show-login">Back to login</a></p>
+    </div>
   </div>
-  
-  <button id="login-btn" style="padding: 0.5rem 1rem;">Login</button>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
 import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
 
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAAOy6HTJ7DCg3jGqCzrvQPWVhtU9umJ0E",
   authDomain: "gurtchat-237b3.firebaseapp.com",
@@ -34,39 +42,57 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getDatabase(app);
 
-// Redirect if already logged in
-const savedUsername = localStorage.getItem("gurtchat_username");
-if(savedUsername) {
-  window.location.href = "chat.html";
-}
-
-// Login button click
-document.getElementById("login-btn").addEventListener("click", () => {
-  const username = document.getElementById("username-input").value.trim();
-  const remember = document.getElementById("remember-me").checked;
-
-  if(!username) {
-    alert("Please enter a username");
-    return;
-  }
-
-  // Save user to Firebase
-  set(ref(db, `users/${username}`), { username, lastLogin: new Date().toISOString() });
-
-  // Save to localStorage if remember me is checked
-  if(remember) localStorage.setItem("gurtchat_username", username);
-
-  // Redirect to chat
-  window.location.href = "chat.html";
+// Form switching
+document.getElementById("show-register").addEventListener("click", () => {
+  document.getElementById("login-form").style.display = "none";
+  document.getElementById("register-form").style.display = "block";
 });
 
-// Enter key to login
-document.getElementById("username-input").addEventListener("keydown", (e) => {
-  if(e.key === "Enter") document.getElementById("login-btn").click();
+document.getElementById("show-login").addEventListener("click", () => {
+  document.getElementById("register-form").style.display = "none";
+  document.getElementById("login-form").style.display = "block";
+});
+
+// Create new account
+document.getElementById("register-btn").addEventListener("click", async () => {
+  const email = document.getElementById("register-email").value;
+  const password = document.getElementById("register-password").value;
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+    await set(ref(db, "users/" + user.uid), {
+      email: email,
+      isAdmin: false,
+      createdAt: new Date().toISOString()
+    });
+    alert("Account created successfully!");
+    window.location.href = "chat.html";
+  } catch (error) {
+    alert("Error: " + error.message);
+  }
+});
+
+// Login
+document.getElementById("login-btn").addEventListener("click", async () => {
+  const email = document.getElementById("login-email").value;
+  const password = document.getElementById("login-password").value;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+    window.location.href = "chat.html";
+  } catch (error) {
+    alert("Login failed: " + error.message);
+  }
+});
+
+// Auto redirect if already logged in
+onAuthStateChanged(auth, user => {
+  if (user) {
+    window.location.href = "chat.html";
+  }
 });
 </script>
-
 </body>
 </html>
