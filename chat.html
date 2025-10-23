@@ -2,33 +2,39 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>GurtChat</title>
+<title>GurtChat - Chat</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-<h1>GurtChat</h1>
-<button id="user-btn" style="position:absolute; top:10px; right:80px;">User</button>
+<div class="header">
+  <h1>GurtChat</h1>
+  <div class="top-buttons">
+    <button id="admin-btn" style="display:none;">Admin Panel</button>
+    <button id="logout-btn">Logout</button>
+  </div>
+</div>
 
 <div id="app">
-    <div id="sidebar">
-        <h2>Channels</h2>
-    </div>
+  <aside id="sidebar">
+    <h2>Channels</h2>
+    <div id="channel-list"></div>
+  </aside>
 
-    <div id="chat-area">
-        <div id="messages"></div>
-        <div style="display:flex; gap:0.5rem;">
-            <input id="chat-input" placeholder="Type a message..." />
-            <button id="send-btn">Send</button>
-        </div>
+  <main id="chat-area">
+    <div id="messages"></div>
+    <div id="input-bar">
+      <input id="chat-input" placeholder="Type a message..." />
+      <button id="send-btn">Send</button>
     </div>
+  </main>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+import { getDatabase, ref, push, onChildAdded, get, child } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
+import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
 
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyAAOy6HTJ7DCg3jGqCzrvQPWVhtU9umJ0E",
   authDomain: "gurtchat-237b3.firebaseapp.com",
@@ -41,105 +47,80 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
 
-//========================
-// Username check
-//========================
-const username = localStorage.getItem("gurtchat_username");
-if(!username) window.location.href = "index.html";
+// Auth guard
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    window.location.href = "index.html";
+  } else {
+    const snap = await get(child(ref(db), `users/${user.uid}`));
+    const userData = snap.val();
+    if (userData?.isAdmin) {
+      document.getElementById("admin-btn").style.display = "inline-block";
+    }
+  }
+});
 
-//========================
-// Chat Initialization
-//========================
+// Basic chat
 const channels = ["General", "Random", "Dev"];
 let currentChannel = "General";
 
-const sidebar = document.getElementById('sidebar');
+const channelListDiv = document.getElementById('channel-list');
 const messagesDiv = document.getElementById('messages');
 const chatInput = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
-const logoutBtn = document.getElementById('logout-btn');
-const userBtn = document.getElementById('user-btn');
 
-//========================
-// Bad words filtering
-//========================
-const bannedWords = ["fuck"];
-function filterMessage(text) {
-  let filtered = text;
-  bannedWords.forEach(word => {
-    const regex = new RegExp(`\\b${word}\\b`, "gi");
-    filtered = filtered.replace(regex, "****");
-  });
-  return filtered;
-}
-
-//========================
-// Logout / User buttons
-//========================
-logoutBtn.addEventListener("click", () => {
-  localStorage.removeItem("gurtchat_username");
-  window.location.href = "index.html";
-});
-
-userBtn.addEventListener("click", () => {
-  window.location.href = "user.html";
-});
-
-//========================
-// Functions
-//========================
 function renderChannels() {
-  sidebar.innerHTML = "<h2>Channels</h2>";
+  channelListDiv.innerHTML = "";
   channels.forEach(ch => {
     const btn = document.createElement("button");
     btn.textContent = ch;
-    btn.className = (ch === currentChannel) ? "active" : "";
+    btn.className = ch === currentChannel ? "active" : "";
     btn.addEventListener("click", () => {
       currentChannel = ch;
       renderChannels();
       listenMessages();
     });
-    sidebar.appendChild(btn);
+    channelListDiv.appendChild(btn);
   });
 }
 
-function renderMessageBubble(msg) {
-  const bubble = document.createElement("div");
-  bubble.textContent = `${msg.user} [${msg.time}]: ${msg.text}`;
-  bubble.className = "msg-bubble " + (msg.user === username ? "msg-user" : "msg-other");
-  messagesDiv.appendChild(bubble);
+function renderMessage(msg) {
+  const div = document.createElement("div");
+  div.className = "msg-bubble";
+  div.textContent = msg.user + ": " + msg.text;
+  messagesDiv.appendChild(div);
   messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
-
-function sendMessage() {
-  const rawText = chatInput.value.trim();
-  if(rawText !== "") {
-    const text = filterMessage(rawText);
-    const msg = { user: username, text, time: new Date().toLocaleTimeString() };
-    push(ref(db, `messages/${currentChannel}`), msg);
-    chatInput.value = "";
-  }
 }
 
 function listenMessages() {
   messagesDiv.innerHTML = "";
-  const messagesRef = ref(db, `messages/${currentChannel}`);
-  onChildAdded(messagesRef, snapshot => renderMessageBubble(snapshot.val()));
+  onChildAdded(ref(db, `messages/${currentChannel}`), (snapshot) => {
+    renderMessage(snapshot.val());
+  });
 }
 
-//========================
-// Event Listeners
-//========================
-sendBtn.addEventListener("click", sendMessage);
-chatInput.addEventListener("keydown", (e) => { if(e.key==="Enter") sendMessage(); });
+sendBtn.addEventListener("click", async () => {
+  const text = chatInput.value.trim();
+  if (text) {
+    const user = auth.currentUser;
+    const msg = { user: user.email, text, time: new Date().toLocaleTimeString() };
+    push(ref(db, `messages/${currentChannel}`), msg);
+    chatInput.value = "";
+  }
+});
 
-//========================
-// Initial Render
-//========================
+document.getElementById("logout-btn").addEventListener("click", () => {
+  signOut(auth).then(() => window.location.href = "index.html");
+});
+
+document.getElementById("admin-btn").addEventListener("click", () => {
+  window.location.href = "admin.html";
+});
+
 renderChannels();
 listenMessages();
-
 </script>
 </body>
 </html>
