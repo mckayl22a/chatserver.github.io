@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>GurtChat</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <title>GurtChat</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div id="chat-wrapper">
@@ -11,7 +11,7 @@
   <div id="sidebar">
     <h2>GurtChat</h2>
     <div class="channel-list" id="channel-list">
-      <div class="channel active" data-channel="General"># General</div>
+      <div class="channel active" data-channel="general"># general</div>
       <div class="channel" data-channel="random"># random</div>
       <div class="channel" data-channel="help"># help</div>
     </div>
@@ -20,10 +20,10 @@
 
   <!-- Chat Area -->
   <div id="chat-area">
-    <div id="chat-header"># General</div>
+    <div id="chat-header"># general</div>
     <div id="messages"></div>
     <div id="chat-input-area">
-      <input id="chat-input" placeholder="Message #General" />
+      <input id="chat-input" placeholder="Message #general" />
       <button id="send-btn">Send</button>
     </div>
   </div>
@@ -34,26 +34,40 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebas
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-auth.js";
 import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-database.js";
 
-const firebaseConfig = { /* same as index.html */ };
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAAOy6HTJ7DCg3jGqCzrvQPWVhtU9umJ0E",
+  authDomain: "gurtchat-237b3.firebaseapp.com",
+  databaseURL: "https://gurtchat-237b3-default-rtdb.firebaseio.com",
+  projectId: "gurtchat-237b3",
+  storageBucket: "gurtchat-237b3.firebasestorage.app",
+  messagingSenderId: "762205720734",
+  appId: "1:762205720734:web:e96c0888b31155380aeb8f"
+};
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getDatabase(app);
 
 let username = "";
-let currentChannel = "General";
+let currentChannel = "general";
 
-// Auth guard & initialize chat
 onAuthStateChanged(auth, (user) => {
   if (!user) {
+    // Not logged in → redirect to login page
     localStorage.removeItem("gurtchat_username");
     window.location.href = "index.html";
     return;
   }
+
+  // User is logged in → get username
   username = localStorage.getItem("gurtchat_username") || user.email.split("@")[0];
-  initChat();
+
+  // Initialize chat UI after auth is confirmed
+  initChatUI();
 });
 
-function initChat() {
+function initChatUI() {
   const messagesDiv = document.getElementById("messages");
   const input = document.getElementById("chat-input");
 
@@ -67,7 +81,7 @@ function initChat() {
     return text;
   }
 
-  // Load messages
+  // Load messages for a channel
   function loadMessages(channel) {
     messagesDiv.innerHTML = "";
     const messagesRef = ref(db, `messages/${channel}`);
@@ -84,20 +98,26 @@ function initChat() {
   loadMessages(currentChannel);
 
   // Send message
-  document.getElementById("send-btn").addEventListener("click", sendMessage);
-  input.addEventListener("keypress", (e)=>{if(e.key==="Enter") sendMessage();});
-
-  function sendMessage(){
+  function sendMessage() {
     const text = filterMessage(input.value.trim());
-    if(!text) return;
-    push(ref(db, `messages/${currentChannel}`), {user: username,text: text,timestamp: Date.now()});
-    input.value="";
+    if (!text) return;
+    push(ref(db, `messages/${currentChannel}`), {
+      user: username,
+      text: text,
+      timestamp: Date.now()
+    });
+    input.value = "";
   }
 
-  // Switch channels
-  document.querySelectorAll(".channel").forEach(el=>{
-    el.addEventListener("click", ()=>{
-      document.querySelectorAll(".channel").forEach(c=>c.classList.remove("active"));
+  document.getElementById("send-btn").addEventListener("click", sendMessage);
+  input.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") sendMessage();
+  });
+
+  // Channel switching
+  document.querySelectorAll(".channel").forEach(el => {
+    el.addEventListener("click", () => {
+      document.querySelectorAll(".channel").forEach(c => c.classList.remove("active"));
       el.classList.add("active");
       currentChannel = el.dataset.channel;
       document.getElementById("chat-header").textContent = `# ${currentChannel}`;
@@ -106,8 +126,10 @@ function initChat() {
     });
   });
 
-  // User page button
-  document.getElementById("user-btn").addEventListener("click", ()=>window.location.href="user.html");
+  // ✅ User Page button works now
+  document.getElementById("user-btn").addEventListener("click", () => {
+    window.location.href = "user.html";
+  });
 }
 </script>
 </body>
