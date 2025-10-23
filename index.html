@@ -131,12 +131,20 @@
       }
     });
 
-    // 🚀 Auto Redirect if Already Logged In
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        window.location.href = "chat.html";
-      }
-    });
+// 🚀 Auto Redirect if Already Logged In
+onAuthStateChanged(auth, (user) => {
+  // Wait until Firebase finishes initializing
+  if (user && user.emailVerified !== false) {
+    // Double-check Firebase authentication
+    console.log("User logged in:", user.email);
+    window.location.href = "chat.html";
+  } else {
+    console.log("No user logged in, staying on login page.");
+    // Ensure old username data is cleared
+    localStorage.removeItem("gurtchat_username");
+  }
+});
+
   </script>
 </body>
 </html>
